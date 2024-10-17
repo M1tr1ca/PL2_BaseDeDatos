@@ -26,6 +26,32 @@ CREATE TABLE IF NOT EXISTS Automóvil (
     ON DELETE RESTRICT ON UPDATE CASCADE
 ); */
 
+/* CREATE TABLE IF NOT EXISTS Persona (
+    DNI CHAR(9) NOT NULL,
+    Nombre TEXT UNIQUE,
+    Edad INT,
+    CONSTRAINT Persona_pk PRIMARY KEY (DNI)
+);
+
+CREATE TABLE IF NOT EXISTS Automóvil (
+    Matrícula CHAR(7) NOT NULL,
+    Marca TEXT,
+    Modelo TEXT,
+    Kilómetros INT,
+    CONSTRAINT Automóvil_pk PRIMARY KEY (Matrícula)
+);
+
+CREATE TABLE Conduce (
+    DNI_Persona CHAR(9) NOT NULL,
+    Matrícula_Automóvil CHAR(7) NOT NULL,
+    CONSTRAINT Conduce_pk PRIMARY KEY (DNI_Persona, Matrícula_Automóvil),
+    CONSTRAINT Persona_fk FOREIGN KEY (DNI_Persona) REFERENCES Persona (DNI) MATCH FULL
+    ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT Automóvil_fk FOREIGN KEY (Matrícula_Automóvil) REFERENCES Automóvil (Matrícula) MATCH FULL
+    ON DELETE CASCADE ON UPDATE CASCADE
+); */
+
+
 
 CREATE TABLE IF NOT EXISTS albumes.grupo (
     url_grupo CHAR(100) UNIQUE NOT NULL,
