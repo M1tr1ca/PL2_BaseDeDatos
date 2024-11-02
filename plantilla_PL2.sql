@@ -69,29 +69,29 @@ CREATE TABLE IF NOT EXISTS Edicion (
 CREATE TABLE IF NOT EXISTS Genero (
     Genero TEXT NOT NULL,
     Titulo_Disco TEXT NOT NULL,
-    Año_publicacion INT,
-    CONSTRAINT Genero_pk PRIMARY KEY (Genero),
-    CONSTRAINT Titulo_Disco_fk FOREIGN KEY (Titulo_Disco, Año_publicacion) REFERENCES Disco(Titulo_Disco, Año_publicacion_Disco) MATCH FULL,
-    CONSTRAINT Año_publicacion_uq UNIQUE (Año_publicacion)
+    Año_publicacion_Disco INT,
+    CONSTRAINT Genero_pk PRIMARY KEY (Genero, Titulo_Disco, Año_publicacion_Disco),
+    CONSTRAINT Titulo_Disco_fk FOREIGN KEY (Titulo_Disco, Año_publicacion_Disco) REFERENCES Disco(Titulo_Disco, Año_publicacion_Disco) MATCH FULL
 );
 --Género (Titulo_Disco , Año_publicacion_Disco, Género) 
 
 --REALCIONES:
 
 CREATE TABLE IF NOT EXISTS Tiene (
-    Formato_Ediciones TEXT NOT NULL, 
-    Año_Edicion INT NOT NULL, 
-    País_Ediciones TEXT NOT NULL, 
+
     Nombre_Usuario TEXT NOT NULL, 
-    Estado TEXT NOT NULL, 
     Titulo_Disco TEXT NOT NULL,
     Año_publicacion_Disco INT NOT NULL,
+    Año_Edicion INT NOT NULL, 
+    País_Ediciones TEXT NOT NULL, 
+    Formato_Ediciones TEXT NOT NULL, 
+    Estado TEXT NOT NULL, 
     
-    CONSTRAINT tiene_pk PRIMARY KEY (Formato_Ediciones, Año_Edicion, País_Ediciones, Titulo_Disco, Año_publicacion_Disco, Nombre_Usuario),  
+    CONSTRAINT tiene_pk PRIMARY KEY (Nombre_Usuario, Formato_Ediciones, Año_Edicion, País_Ediciones, Titulo_Disco, Año_publicacion_Disco),  
     
     -- FK de Edicion
     CONSTRAINT tiene_fk FOREIGN KEY (Formato_Ediciones, Año_Edicion, País_Ediciones, Titulo_Disco, Año_publicacion_Disco) 
-    REFERENCES Edicion(Titulo_Disco, Año_Edicion, País ,Formato, Año_publicacion_Disco) MATCH FULL,
+    REFERENCES Edicion(Formato, Año_Edicion, País, Titulo_Disco, Año_publicacion_Disco) MATCH FULL,
     
     -- FK de Usuario
     CONSTRAINT tiene_fk2 FOREIGN KEY (Nombre_Usuario) 
@@ -101,9 +101,9 @@ CREATE TABLE IF NOT EXISTS Tiene (
 --Tiene (Formato_Ediciones, Año_publicación_Ediciones, País_Ediciones, Nombre_usuario, Estado) 
 
 CREATE TABLE IF NOT EXISTS Desea(
+    Nombre_Usuario TEXT NOT NULL, 
     Titulo_Disco TEXT NOT NULL, 
     Año_publicacion_Disco INT NOT NULL, 
-    Nombre_Usuario TEXT NOT NULL, 
     
     CONSTRAINT desea_pk PRIMARY KEY (Titulo_Disco, Año_publicacion_Disco, Nombre_Usuario), 
     
@@ -136,7 +136,7 @@ CREATE TEMPORARY TABLE temp_Discos(
     id_grupo INT,
     Nombre_Grupo VARCHAR,
     Url_Grupo VARCHAR,
-    Genero VARCHAR,
+    Genero TEXT, 
     Url_Portada VARCHAR
 );
 
@@ -150,14 +150,20 @@ CREATE TEMPORARY TABLE temp_Ediciones(
 CREATE TEMPORARY TABLE temp_Usuarios_tiene_edicion(
     Nombre_Usuario VARCHAR,
     titulo_Disco VARCHAR,
+    Anno_Lanzamiento INT,
+    Anno_edicion INT,
     Pais_De_La_Edicion VARCHAR,
-    Anno_Lanzamiento INT
+    Formato VARCHAR,
+    Estado VARCHAR
+
 );
+
+
 
 CREATE TEMPORARY TABLE temp_Usuarios_desea_disco(
     Nombre VARCHAR,
     Titulo VARCHAR,
-    Anno_Lanzamiento VARCHAR
+    Anno_Lanzamiento INT
 );
 
 CREATE TEMPORARY TABLE temp_Usuarios (
@@ -181,6 +187,9 @@ DELIMITER ';'
 CSV HEADER
 NULL 'NULL';
 
+UPDATE temp_Discos
+SET Genero = REPLACE(REPLACE(Genero, '[', ''), ']', '');
+
 COPY temp_Ediciones (ID, Año_Publicación, Pais_De_La_Edicion, Formato)
 FROM 'C:/UAH/BaseDeDatos/PL2_BaseDeDatos/ediciones.csv'
 DELIMITER ';'
@@ -199,13 +208,12 @@ DELIMITER ';'
 CSV HEADER
 NULL 'NULL';
 
+COPY temp_Usuarios_tiene_edicion (Nombre_Usuario, titulo_Disco, Anno_Lanzamiento, Anno_edicion, Pais_De_La_Edicion, Formato, Estado)
+FROM 'C:/UAH/BaseDeDatos/PL2_BaseDeDatos/usuario_tiene_edicion.csv'
+DELIMITER ';'
+CSV HEADER
+NULL 'NULL';
 
-/* SELECT
-    Titulo_Disco,        -- Título del disco
-    Año_Publicacion_Disco -- Año de publicación
-FROM temp_Discos; */
-
--- Load data from CSV files into the temporary tables
 
 -- Insert data from temporary tables into the final tables
 INSERT INTO Grupo (url_grupo, nombre)
@@ -224,7 +232,7 @@ JOIN temp_Ediciones e ON d.id_discos = e.ID;
 INSERT INTO Cancion (Titulo, Duracion, Titulo_Disco, Año_publicacion_Disco)
 SELECT DISTINCT ON (c.Titulo_Cancion, d.Titulo_Disco, d.Año_Publicacion_Disco) c.Titulo_Cancion, c.Duracion, d.Titulo_Disco, d.Año_Publicacion_Disco
 FROM temp_Canciones c
-JOIN temp_Discos d ON c.ID = d.id_discos
+INNER JOIN temp_Discos d ON c.ID = d.id_discos
 WHERE (d.Titulo_Disco, d.Año_Publicacion_Disco) IN (SELECT Titulo_Disco, Año_publicacion_Disco FROM Disco);
 
 
@@ -232,22 +240,41 @@ WHERE (d.Titulo_Disco, d.Año_Publicacion_Disco) IN (SELECT Titulo_Disco, Año_p
 INSERT INTO Edicion (Titulo_Disco, Año_publicacion_Disco, Formato, Año_Edicion, País)
 SELECT DISTINCT ON (d.Titulo_Disco, d.Año_publicacion_Disco, e.Formato, e.Año_Publicación, e.Pais_De_La_Edicion )d.Titulo_Disco, d.Año_publicacion_Disco, e.Formato, e.Año_Publicación, e.Pais_De_La_Edicion 
 FROM temp_Ediciones e
-JOIN temp_Discos d ON e.ID = d.id_discos;
+INNER JOIN temp_Discos d ON e.ID = d.id_discos;
 
 
-/* INSERT INTO Genero (Genero, Titulo_Disco, Año_publicacion)
-SELECT d.Genero, d.Titulo_Disco, d.Año_publicacion 
-FROM temp_Discos d;
-SELECT REPLACE(REPLACE(STRING_AGG(nombre_columna, ', '), '[', ''), ']', '') AS resultado
-FROM tu_tabla; */
--- arreglar el funcionamiento de Genero 
+INSERT INTO Tiene (Nombre_Usuario, Titulo_Disco, Año_publicacion_Disco, Año_Edicion, País_Ediciones, Formato_Ediciones, Estado)
+SELECT DISTINCT ON (Nombre_Usuario, titulo_Disco, Anno_Lanzamiento, Anno_edicion, Pais_De_La_Edicion, Formato) 
+    Nombre_Usuario, titulo_Disco, Anno_Lanzamiento, Anno_edicion, Pais_De_La_Edicion, Formato, Estado
+FROM temp_Usuarios_tiene_edicion
+WHERE Nombre_Usuario IN (SELECT nombre_usuario FROM Usuario);
 
-INSERT INTO Tiene (Formato_Ediciones, Año_publicacion_Ediciones, País_Ediciones, Nombre_Usuario, Estado)
-SELECT Formato_Ediciones, Año_publicacion_Ediciones, País_Ediciones, Nombre_Usuario, Estado FROM temp_Usuarios_tiene_edicion;
 
-INSERT INTO Desea (Titulo_Disco, Año_publicacion_Disco, Nombre_Usuario)
-SELECT Titulo_Disco, Año_publicacion_Disco, Nombre_Usuario FROM temp_Usuarios_desea_disco;
--- Replace, REGEST-REPLACE, 
+INSERT INTO Desea (Nombre_Usuario, Titulo_Disco, Año_publicacion_Disco)
+SELECT DISTINCT ON (Nombre, Titulo, Anno_Lanzamiento)
+    Nombre, Titulo, Anno_Lanzamiento
+FROM temp_Usuarios_desea_disco
+WHERE (Titulo, Anno_Lanzamiento) IN (SELECT Titulo_Disco, Año_publicacion_Disco FROM Disco) AND Nombre IN (SELECT nombre_usuario FROM Usuario);
+
+/* WHERE (Titulo, Anno_Lanzamiento) IN (SELECT Titulo_Disco, Año_publicacion_Disco FROM Disco): 
+Este filtro asegura que solo se seleccionen los registros cuyo título y año de lanzamiento existen en la tabla Disco. */
+
+/* AND Nombre IN (SELECT nombre_usuario FROM Usuario): 
+Este filtro adicional asegura que solo se seleccionen los registros cuyo nombre existe en la tabla Usuario. */
+
+-- Replace, REGEST-REPLACE,
+
+
+INSERT INTO Genero (Genero, Titulo_Disco, Año_publicacion_Disco) -- Este comando va a agregar datos a la tabla Genero en las columnas especificadas: Genero, Titulo_Disco, y Año_publicacion_Disco.
+SELECT DISTINCT ON (UNNEST(string_to_array(Genero, ', ')), Titulo_Disco, Año_Publicacion_Disco) -- Esto selecciona datos de otra tabla (en este caso, temp_Discos) y se asegura de que los géneros que se seleccionan no se repitan. Es decir, si hay múltiples entradas con el mismo género y disco, solo tomará una.
+    UNNEST(string_to_array(Genero, ', ')), Titulo_Disco, Año_Publicacion_Disco -- Este parte toma el texto de la columna Genero, que podría tener varios géneros separados por comas (como 'Rock, Pop'), y los divide en varias filas. Así, cada género se convierte en una fila independiente. Por ejemplo, 'Rock, Pop' se convierte en dos filas: una con 'Rock' y otra con 'Pop'.
+FROM temp_Discos -- Indica que los datos que se van a seleccionar provienen de la tabla temp_Discos.
+WHERE Genero IS NOT NULL -- Esto filtra los resultados para asegurarse de que solo se incluyan las filas donde la columna Genero no esté vacía.
+AND (Titulo_Disco, Año_Publicacion_Disco) IN (SELECT Titulo_Disco, Año_publicacion_Disco FROM Disco); -- Esta parte asegura que solo se incluyan los discos que también están presentes en la tabla Disco. Solo se insertarán géneros de discos que existen en esa tabla.
+
+
+
+\echo 'datos cargados'
 
 
 
@@ -265,45 +292,6 @@ SET search_path='nombre del esquema o esquemas utilizados';
 
 ROLLBACK;                       -- importante! permite correr el script multiples veces...p
 
-
-
-
-
-
-/* /* CREATE TEMP TABLE temp_genero_concatenado AS
-SELECT 
-    Titulo_Disco, 
-    Año_publicacion,
-    REPLACE(REPLACE(STRING_AGG(generos, ', '), '[', ''), ']', '') AS concatenado
-FROM temp_genero_array
-GROUP BY Titulo_Disco, Año_publicacion; */
-
-
-CREATE TEMPORARY TABLE temp_genero_array AS
-SELECT 
-    string_to_array(Genero, ',') AS generos,  -- Convertir la cadena de géneros en un array
-    Titulo_Disco,                            -- Título del disco desde temp_discos
-    Año_publicacion                          -- Año de publicación desde temp_discos
-FROM temp_Discos;
-
--- Insert into genero (Genero, Titulo_Disco, Año_publicacion) SELECT unnest(generos), Titulo_Disco, Año_publicacion FROM temp_genero_array;
-
-
-
--- Crear una tabla temporal que contenga cada elemento del array en filas y una agregación concatenada
-CREATE TEMP TABLE temp_genero_expandido AS
-SELECT 
-    unnest(generos) AS genero,                     -- Descompone el array en filas
-    Titulo_Disco,                                  -- Mantiene el título del disco
-    Año_publicacion,                               -- Mantiene el año de publicación
-    REPLACE(REPLACE(STRING_AGG(unnest(generos), ', '), '[', ''), ']', '') AS concatenado -- Concatenar todos los géneros
-FROM temp_genero_array
-GROUP BY Titulo_Disco, Año_publicacion, genero;   -- Agrupar para evitar duplicados
-
-
---[POP, ROCK,....], Titulo,Año
---Pop, titulo, año
---Rock, titulo, año */
 
 
 
